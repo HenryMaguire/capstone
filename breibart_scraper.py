@@ -4,7 +4,22 @@ from bs4 import BeautifulSoup
 import unicodedata
 import pandas as pd
 import numpy as np
+import os
 import time
+import pickle
+"""
+This is the code that I need to scrape headline and article data off the Breitbart website. The intention is to create a bot which can generate headlines from a given article.
+"""
+
+def save_obj(obj, name ):
+    with open(name + '.pickle', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name ):
+    with open(name + '.pickle', 'rb') as f:
+        return pickle.load(f)
+
+
 def removeNonAscii(s):
     # Get rid of non ascii characters
     return "".join(i for i in s if ord(i)<128)
@@ -15,17 +30,21 @@ def replace_all(text, dic):
     return text
 
 def headline_and_body(article_url):
+    # Finds raw HTML for headline and body and also returns the post id. Could also do with storing the author.
     article_html = urllib.urlopen(article_url).read()
+
     postid_start_tag = 'postid-'
     postid_end_tag = ' js'
     postid_start_id = article_html.index(postid_start_tag)
     postid_end_id = article_html.index(postid_end_tag)
     postid_html = article_html[postid_start_id+len(postid_start_tag):postid_end_id]
+
     hl_start_tag = "<title>"
     hl_end_tag = "</title>"
     hl_start_id = article_html.index(hl_start_tag)
     hl_end_id = article_html.index(hl_end_tag)
     headline_html = article_html[hl_start_id:hl_end_id]
+
     b_start_tag = "</div></form></div></div><h2"
     b_end_tag = "<h3>Read More Stories About:</h3>"
     b_start_id = article_html.index(b_start_tag)
@@ -51,7 +70,7 @@ def clean_HTML(html):
     text = '  '.join(chunk for chunk in chunks if chunk)
 
     """
-    Get rid of erroneous square brackets and internal publicity
+    Get rid of erroneous square brackets and internal publicity and unruly ascii characters that I don't understand. Not foolproof.
     """
     dic = {'[': '', ']':'', 'SIGN UP FOR OUR NEWSLETTER':'', u'\u201c':'', u'\u2014':'', u'\u201d':'', u'\u2018':"", u'\u2019':"'", u'\u2013':'', u'\u2026':''}
     text = replace_all(text, dic)
@@ -70,8 +89,8 @@ def next_link(home_html, current_id):
     # return link and finishing index
     return article_link, next_id
 
-data_dic = {}
-home_url = "http://www.breitbart.com/big-government/"
+data_dic = load_obj('news_data')
+home_url = "http://www.breitbart.com/big-government/page/84/"
 link_start_tag = '<h2 class="title"><a href="'
 link_end_tag = '" title='
 home_html = urllib.urlopen(home_url).read()
@@ -79,25 +98,23 @@ home_html = urllib.urlopen(home_url).read()
 # Initially, get the first link and end_id
 article_link, next_id = next_link(home_html,0)
 i = 0
-while len(data_dic.keys()) < 100:
-    #print article_link, next_id
-    if article_link:
+while len(data_dic.keys()) < 10000:
+    if article_link: # This being false means we need to go to next page of headlines
         try:
             article_url = "http://www.breitbart.com"+article_link
             article_url = article_url.replace("http://www.breitbart.comh", 'h')
             try:
                 post_id, headline_html, body_html = headline_and_body(article_url)
-            except:
-                print article_url, " body or headline couldn't be found"
-                post_id, headline_html, body_html = 0, '', ''
-            try:
                 headline_text, body_text = clean_HTML(headline_html), clean_HTML(body_html)
-            except e:
-                print e
-            # store it in the dictionary
-            data_dic[i] = np.array([post_id,headline_text, body_text, article_link])
-            i+=1
-            time.sleep(0.1)
+                data_dic[post_id] = [headline_text, body_text, article_link]
+                i+=1
+            except:
+                pass
+                # Random opinion articles and videos are different formats, skip these.
+                # Also if there are still any errant ascii characters, merely skip the article. Doesn't happen often.
+                #print article_url, " body or headline couldn't be found"
+
+            time.sleep(0.07) # I don't want to get caught doing a DOS attack
 
             article_link, next_id = next_link(home_html, next_id)
             # update the hompage html file
@@ -115,13 +132,11 @@ while len(data_dic.keys()) < 100:
         new_page_begin_id = home_html.index(new_page_begin_tag)+len(new_page_begin_tag)
         new_page_end_id = home_html.index(new_page_end_tag)
         home_url =home_html[new_page_begin_id:new_page_end_id]
-        print "new page @ ", home_url
+
+        print len(data_dic.keys()), "articles found so far. Beginning new page @ ", home_url
         home_html = urllib.urlopen(home_url).read()
-        article_link, next_id = next_link(home_html,next_id)
-#article_url = "http://www.breitbart.com/big-government/2017/02/28/target-down-30-percent-since-transgender-boycott-began/"
-#article_url = "http://www.breitbart.com/big-government/2017/03/01/rabbi-shmuley-comparing-trump-hitler-desecrates-holocaust/"
-#article_url = "http://www.breitbart.com/big-government/2017/03/01/trump-speech-offered-america-cathartic-moment-mourning/"
+        article_link, next_id = next_link(home_html, next_id)
 
-
-
-#df = pd.DataFrame(data_lib, index=range(len(data_lib.keys())),columns=['A','B','C'])
+data_root = '.'
+pickle_file = os.path.join(data_root, 'news_data.pickle')
+save_obj(data_dic, 'news_data')
