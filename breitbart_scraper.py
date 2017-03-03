@@ -32,15 +32,7 @@ def replace_all(text, dic):
 def headline_and_body(article_url):
     # Finds raw HTML for headline and body and also returns the post id. Could also do with storing the author.
     article_html = urllib.urlopen(article_url).read()
-    postid_html, headline_html, body_html = '', '', ''
-    try:
-        postid_start_tag = 'postid-'
-        postid_end_tag = ' js'
-        postid_start_id = article_html.index(postid_start_tag)
-        postid_end_id = article_html.index(postid_end_tag)
-        postid_html = article_html[postid_start_id+len(postid_start_tag):postid_end_id]
-    except:
-        print "No post-id found @ ",article_url
+    postid_html, headline_html, body_html = hash(article_html), '', ''
     try:
         try:
             hl_start_tag = "<title>"
@@ -117,8 +109,8 @@ def next_link(home_html, current_id):
     # return link and finishing index
     return article_link, next_id
 
-data_dic = load_obj('news_data')
-home_url = "http://www.breitbart.com/big-government/page/374/"
+data_dic = {} #load_obj('news_data')
+home_url = "http://www.breitbart.com/big-government/"
 link_start_tag = '<h2 class="title"><a href="'
 link_end_tag = '" title='
 home_html = urllib.urlopen(home_url).read()
@@ -126,7 +118,7 @@ home_html = urllib.urlopen(home_url).read()
 # Initially, get the first link and end_id
 article_link, next_id = next_link(home_html,0)
 i = 0
-while len(data_dic.keys()) < 30000:
+while len(data_dic.keys()) < 60:
     if article_link: # This being false means we need to go to next page of headlines
         try:
             article_url = "http://www.breitbart.com"+article_link
@@ -167,5 +159,6 @@ while len(data_dic.keys()) < 30000:
         article_link, next_id = next_link(home_html, next_id)
 
 data_root = '.'
-pickle_file = os.path.join(data_root, 'news_data.pickle')
-save_obj(data_dic, 'news_data')
+name = 'news_data2'
+pickle_file = os.path.join(data_root, name+'.pickle')
+save_obj(data_dic, name)
