@@ -90,7 +90,7 @@ def next_link(home_html, current_id):
     return article_link, next_id
 
 data_dic = load_obj('news_data')
-home_url = "http://www.breitbart.com/big-government/page/84/"
+home_url = "http://www.breitbart.com/big-government/page/374/"
 link_start_tag = '<h2 class="title"><a href="'
 link_end_tag = '" title='
 home_html = urllib.urlopen(home_url).read()
@@ -98,7 +98,7 @@ home_html = urllib.urlopen(home_url).read()
 # Initially, get the first link and end_id
 article_link, next_id = next_link(home_html,0)
 i = 0
-while len(data_dic.keys()) < 10000:
+while len(data_dic.keys()) < 22000:
     if article_link: # This being false means we need to go to next page of headlines
         try:
             article_url = "http://www.breitbart.com"+article_link
@@ -114,7 +114,7 @@ while len(data_dic.keys()) < 10000:
                 # Also if there are still any errant ascii characters, merely skip the article. Doesn't happen often.
                 #print article_url, " body or headline couldn't be found"
 
-            time.sleep(0.07) # I don't want to get caught doing a DOS attack
+            time.sleep(0.01) # I don't want to get caught doing a DOS attack
 
             article_link, next_id = next_link(home_html, next_id)
             # update the hompage html file
