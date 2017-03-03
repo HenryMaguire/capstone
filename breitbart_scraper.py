@@ -109,7 +109,7 @@ def next_link(home_html, current_id):
     # return link and finishing index
     return article_link, next_id
 
-data_dic = {} #load_obj('news_data')
+data_dic = load_obj('news_data2')
 home_url = "http://www.breitbart.com/big-government/"
 link_start_tag = '<h2 class="title"><a href="'
 link_end_tag = '" title='
@@ -118,7 +118,7 @@ home_html = urllib.urlopen(home_url).read()
 # Initially, get the first link and end_id
 article_link, next_id = next_link(home_html,0)
 i = 0
-while len(data_dic.keys()) < 60:
+while len(data_dic.keys()) < 30000:
     if article_link: # This being false means we need to go to next page of headlines
         try:
             article_url = "http://www.breitbart.com"+article_link
