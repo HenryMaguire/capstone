@@ -32,24 +32,52 @@ def replace_all(text, dic):
 def headline_and_body(article_url):
     # Finds raw HTML for headline and body and also returns the post id. Could also do with storing the author.
     article_html = urllib.urlopen(article_url).read()
-
-    postid_start_tag = 'postid-'
-    postid_end_tag = ' js'
-    postid_start_id = article_html.index(postid_start_tag)
-    postid_end_id = article_html.index(postid_end_tag)
-    postid_html = article_html[postid_start_id+len(postid_start_tag):postid_end_id]
-
-    hl_start_tag = "<title>"
-    hl_end_tag = "</title>"
-    hl_start_id = article_html.index(hl_start_tag)
-    hl_end_id = article_html.index(hl_end_tag)
-    headline_html = article_html[hl_start_id:hl_end_id]
-
-    b_start_tag = "</div></form></div></div><h2"
-    b_end_tag = "<h3>Read More Stories About:</h3>"
-    b_start_id = article_html.index(b_start_tag)
-    b_end_id = article_html.index(b_end_tag)
-    body_html = article_html[b_start_id:b_end_id]
+    postid_html, headline_html, body_html = '', '', ''
+    try:
+        postid_start_tag = 'postid-'
+        postid_end_tag = ' js'
+        postid_start_id = article_html.index(postid_start_tag)
+        postid_end_id = article_html.index(postid_end_tag)
+        postid_html = article_html[postid_start_id+len(postid_start_tag):postid_end_id]
+    except:
+        print "No post-id found @ ",article_url
+    try:
+        try:
+            hl_start_tag = "<title>"
+            hl_end_tag = "</title>"
+            hl_start_id = article_html.index(hl_start_tag)
+            hl_end_id = article_html.index(hl_end_tag)
+            headline_html = article_html[hl_start_id:hl_end_id]
+        except:
+            hl_start_tag = '<h1 itemprop="headline">'
+            hl_end_tag = "</h1>"
+            hl_start_id = article_html.index(hl_start_tag)
+            hl_end_id = article_html.index(hl_end_tag)
+            headline_html = article_html[hl_start_id:hl_end_id]
+    except:
+        print 'No headline found @ ',article_url
+    try:
+        try:
+            b_start_tag = "</div></form></div></div><h2"
+            b_end_tag = "<h3>Read More Stories About:</h3>"
+            b_start_id = article_html.index(b_start_tag)
+            b_end_id = article_html.index(b_end_tag)
+            body_html = article_html[b_start_id:b_end_id]
+        except:
+            b_start_tag = "</div></form></div></div><p>"
+            b_end_tag = "</p>"
+            b_start_id = article_html.index(b_start_tag)
+            b_end_id = article_html.index(b_end_tag)
+            body_html = article_html[b_start_id:b_end_id]
+    except:
+        try:
+            b_start_tag = '<div class="inbodyad" id="mobile-ROS-body1"></div></div>'
+            b_end_tag = "</p>"
+            b_start_id = article_html.index(b_start_tag)
+            b_end_id = article_html.index(b_end_tag)
+            body_html = article_html[b_start_id:b_end_id]
+        except:
+            print 'No body found @ ',article_url
     return postid_html, headline_html, body_html
 
 def clean_HTML(html):
@@ -98,7 +126,7 @@ home_html = urllib.urlopen(home_url).read()
 # Initially, get the first link and end_id
 article_link, next_id = next_link(home_html,0)
 i = 0
-while len(data_dic.keys()) < 22000:
+while len(data_dic.keys()) < 30000:
     if article_link: # This being false means we need to go to next page of headlines
         try:
             article_url = "http://www.breitbart.com"+article_link
@@ -109,6 +137,7 @@ while len(data_dic.keys()) < 22000:
                 data_dic[post_id] = [headline_text, body_text, article_link]
                 i+=1
             except:
+                print "no data found at ",article_link
                 pass
                 # Random opinion articles and videos are different formats, skip these.
                 # Also if there are still any errant ascii characters, merely skip the article. Doesn't happen often.
